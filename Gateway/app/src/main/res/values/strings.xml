@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Wireless_Sensor_Network_Gateway</string>
+    <string name="channel_name">Channel 1</string>
+    <string name="channel_description">This is Channel 1</string>
 </resources>

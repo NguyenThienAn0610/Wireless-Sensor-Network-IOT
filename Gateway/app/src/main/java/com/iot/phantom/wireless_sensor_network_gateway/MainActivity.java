@@ -1,12 +1,16 @@
 package com.iot.phantom.wireless_sensor_network_gateway;
 
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Color;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
+import android.os.Build;
 import android.os.Handler;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.NotificationManagerCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -15,15 +19,6 @@ import android.view.View;
 import android.view.ViewDebug;
 import android.view.Window;
 
-import org.eclipse.paho.android.service.MqttAndroidClient;
-import org.eclipse.paho.client.mqttv3.DisconnectedBufferOptions;
-import org.eclipse.paho.client.mqttv3.IMqttActionListener;
-import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
-import org.eclipse.paho.client.mqttv3.IMqttToken;
-import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
-import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
-import org.eclipse.paho.client.mqttv3.MqttException;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -35,6 +30,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.SignInButton;
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.tasks.Task;
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialPort;
 import com.hoho.android.usbserial.driver.UsbSerialProber;
@@ -46,62 +48,23 @@ import com.squareup.okhttp.Response;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.BitSet;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.Executors;
 
-import com.jjoe64.graphview.GraphView;
-import com.jjoe64.graphview.series.DataPoint;
-import com.jjoe64.graphview.series.LineGraphSeries;
 
-
-public class MainActivity extends AppCompatActivity implements SerialInputOutputManager.Listener, View.OnClickListener {
-
+public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+    public static final String EXTRA_MESSAGE = "com.iot.phantom.wireless_sensor_network_gateway.MESSAGE";
     private View decorView;
+    public int RC_SIGN_IN = 0;
 
-    UsbSerialPort port;
-    private static final String ACTION_USB_PERMISSION = "com.android.recipes.USB_PERMISSION";
-    private static final String INTENT_ACTION_GRANT_USB = BuildConfig.APPLICATION_ID + ".GRANT_USB";
+    Button button_log_in;
+    SignInButton button_google;
+    GoogleSignInClient mGoogleSignInClient;
+    GoogleSignInAccount account;
 
-    private void initUSBPort(){
-        UsbManager manager = (UsbManager) getSystemService(Context.USB_SERVICE);
-        List<UsbSerialDriver> availableDrivers = UsbSerialProber.getDefaultProber().findAllDrivers(manager);
-
-        if (availableDrivers.isEmpty()) {
-            Log.d("UART", "UART is not available");
-
-        }else {
-            Log.d("UART", "UART is available");
-
-            UsbSerialDriver driver = availableDrivers.get(0);
-            UsbDeviceConnection connection = manager.openDevice(driver.getDevice());
-            if (connection == null) {
-
-                PendingIntent usbPermissionIntent = PendingIntent.getBroadcast(this, 0, new Intent(INTENT_ACTION_GRANT_USB), 0);
-                manager.requestPermission(driver.getDevice(), usbPermissionIntent);
-
-                manager.requestPermission(driver.getDevice(), PendingIntent.getBroadcast(this, 0, new Intent(ACTION_USB_PERMISSION), 0));
-
-                return;
-            } else {
-
-                port = driver.getPorts().get(0);
-                try {
-                    Log.d("UART", "openned succesful");
-                    port.open(connection);
-                    port.setParameters(115200, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
-
-                    //port.write("ABC#".getBytes(), 1000);
-
-                    SerialInputOutputManager usbIoManager = new SerialInputOutputManager(port, this);
-                    Executors.newSingleThreadExecutor().submit(usbIoManager);
-
-                } catch (Exception e) {
-                    Log.d("UART", "There is error");
-                }
-            }
-        }
-
-    }
+    EditText username, password;
 
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
@@ -123,18 +86,58 @@ public class MainActivity extends AppCompatActivity implements SerialInputOutput
     @Override
     public void onClick(View view) {
         // Do something in response to button click
+        try {
+            switch (view.getId()) {
+                case R.id.button_log_in:
+                    logIn();
+                    break;
+                case R.id.button_google:
+                    googleSignIn();
+                    break;
+            }
+        } catch (Exception e) {
 
+        }
     }
 
-    private String buffer = "";
-    @Override
-    public void onNewData(byte[] data) {
+    public void logIn() {
+        // Initiates the log in and change to the main screen activity
+        Intent intent = new Intent(this, MainScreen.class);
+        String message = username.getText().toString();
+        intent.putExtra(EXTRA_MESSAGE, message);
+        startActivity(intent);
+    }
 
+    private void googleSignIn() {
+        Intent signInIntent = mGoogleSignInClient.getSignInIntent();
+        startActivityForResult(signInIntent, RC_SIGN_IN);
     }
 
     @Override
-    public void onRunError(Exception e) {
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
 
+        // Result returned from launching the Intent from GoogleSignInClient.getSignInIntent(...);
+        if (requestCode == RC_SIGN_IN) {
+            // The Task returned from this call is always completed, no need to attach
+            // a listener.
+            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+            handleSignInResult(task);
+        }
+    }
+
+    private void handleSignInResult(Task<GoogleSignInAccount> completedTask) {
+        try {
+            GoogleSignInAccount account = completedTask.getResult(ApiException.class);
+            Intent intent = new Intent(this, MainScreen.class);
+            startActivity(intent);
+            // Signed in successfully, show authenticated UI.
+
+        } catch (ApiException e) {
+            // The ApiException status code indicates the detailed failure reason.
+            // Please refer to the GoogleSignInStatusCodes class reference for more information.
+            Log.w("Google sign in error", "signInResult:failed code=" + e.getStatusCode());
+        }
     }
 
     @Override
@@ -151,7 +154,26 @@ public class MainActivity extends AppCompatActivity implements SerialInputOutput
                 }
             }
         });
+        username = findViewById(R.id.editTextUsername);
+        password = findViewById(R.id.editTextPassword);
+        button_log_in = findViewById(R.id.button_log_in);
+        button_log_in.setOnClickListener(this);
 
-        initUSBPort();
+        button_google = findViewById(R.id.button_google);
+        button_google.setOnClickListener(this);
+        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestEmail()
+                .build();
+
+        // Build a GoogleSignInClient with the options specified by gso.
+        mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        username.setText("");
+        password.setText("");
     }
 }

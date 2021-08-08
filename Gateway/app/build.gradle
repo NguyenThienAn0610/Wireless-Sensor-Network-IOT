@@ -1,11 +1,11 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion 30
     defaultConfig {
         applicationId "com.iot.phantom.wireless_sensor_network_gateway"
         minSdkVersion 19
-        targetSdkVersion 28
+        targetSdkVersion 30
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
@@ -19,7 +19,7 @@ android {
 
     allprojects {
         repositories {
-            maven { url 'https://jitpack.io'}
+            maven { url 'https://jitpack.io' }
             maven {
                 url "https://repo.eclipse.org/content/repositories/paho-snapshots/"
             }
@@ -42,5 +42,7 @@ dependencies {
     implementation 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.1.0'
     implementation 'org.eclipse.paho:org.eclipse.paho.android.service:1.1.1'
 
-    implementation 'com.jjoe64:graphview:4.2.2'
+    implementation 'com.google.android.gms:play-services-auth:16.0.1'
+
+    implementation 'com.github.PhilJay:MPAndroidChart:v3.0.2'
 }

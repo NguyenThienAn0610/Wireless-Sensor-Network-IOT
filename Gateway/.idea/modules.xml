@@ -3,7 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/Wireless_Sensor_Network_Gateway.iml" filepath="$PROJECT_DIR$/Wireless_Sensor_Network_Gateway.iml" />
-      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/Wireless_Sensor_Network_Gateway.app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/Wireless_Sensor_Network_Gateway.app.iml" />
     </modules>
   </component>
 </project>
